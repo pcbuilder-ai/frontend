@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PC Builder - AI 견적 서비스</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tilt-warp {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .tilt-neon {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        /* 피그마 라이트모드 색상 */
+        :root {
+            --figma-white: #ffffff;
+            --figma-black: #000000;
+            --figma-gray-500: #a6a6a6;
+            --figma-gray-600: #8d8d8d;
+            --figma-gray-700: #a2a2a2;
+            --figma-gray-100: #f5f5f5;
+            --figma-border: #c0c0c0;
+        }
+        
+        /* 피그마 다크모드 색상 */
+        .dark {
+            --figma-white: #1a1a2e;
+            --figma-black: #ffffff;
+            --figma-gray-500: #a6a6a6;
+            --figma-gray-600: #8d8d8d;
+            --figma-gray-700: #a2a2a2;
+            --figma-gray-100: #262626;
+            --figma-border: #a2a2a2;
+        }
+        
+        /* 챗봇 다크모드 색상 */
+        .dark .chatbot-container {
+            background-color: #1a1a2e;
+        }
+        
+        .dark .chat-message-user {
+            background-color: #333333;
+        }
+        
+        .dark .chat-message-ai {
+            background-color: #333333;
+        }
+        
+        .dark .chat-input {
+            background-color: #404040;
+            color: #999999;
+        }
+        
+        /* 회원가입 다크모드 색상 */
+        .dark .signup-container {
+            background-color: #262626;
+            border-color: #d2d2d2;
+        }
+        
+        .dark .signup-input {
+            background-color: #404040;
+            color: #acacac;
+            border-color: #a2a2a2;
+        }
+        
+        .dark .signup-label {
+            color: #ffffff;
+        }
+        
+        .dark .signup-subtitle {
+            color: #9d9d9d;
+        }
+        
+        /* 다크모드 전환 애니메이션 */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+        
+        /* 로그인 버튼 스타일 */
+        .login-button {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            cursor: pointer !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+        
+        .dark .login-button {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+        }
+        
+        /* 로그인 후 사용자명 버튼 스타일 */
+        .user-button {
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+            cursor: pointer !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+        
+        .dark .user-button {
+            background-color: #60a5fa !important;
+            color: #000000 !important;
+        }
+        
+        /* 토글 버튼 애니메이션 */
+        .toggle-button {
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-circle {
+            transition: transform 0.3s ease;
+        }
+        
+        .dark .toggle-circle {
+            transform: translateX(36px);
+        }
+        
+        /* 피그마 정확한 레이아웃 */
+        .figma-container {
+            width: 1440px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        
+        .figma-header {
+            height: 138px;
+            border-bottom: 1px solid var(--figma-border);
+        }
+        
+        /* 반응형 텍스트 크기 */
+        @media (max-width: 1440px) {
+            .figma-container {
+                width: 100%;
+                padding: 0 20px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+                line-height: 3rem;
+            }
+            .hero-subtitle {
+                font-size: 1.2rem;
+                line-height: 1.5rem;
+            }
+            .nav-text {
+                font-size: 1.5rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .hero-title {
+                font-size: 2rem;
+                line-height: 2.5rem;
+            }
+            .hero-subtitle {
+                font-size: 1rem;
+                line-height: 1.3rem;
+            }
+            .nav-text {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900" style="background-color: var(--figma-white);">
+    <!-- Header - 피그마 Frame 1 정확히 재현 -->
+    <header class="figma-header" style="background-color: var(--figma-white); border-bottom-color: var(--figma-border);">
+        <div class="figma-container">
+            <div class="flex justify-between items-center h-full">
+                <!-- Logo - 피그마 위치: x:40, y:39 -->
+                <div class="flex items-center" style="margin-left: 40px;">
+                    <h1 class="tilt-warp text-4xl font-normal" style="font-size: 36px; color: var(--figma-black);">
+                        PC Builder
+                    </h1>
+                </div>
+                
+                <!-- Navigation - 피그마 정확한 위치와 크기 -->
+                <nav class="hidden md:flex items-center space-x-8">
+                    <!-- 견적 - x:523, y:46, fontSize:32 -->
+                    <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">견적</a>
+                    <!-- 제품 - x:633, y:49, fontSize:32 -->
+                    <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">제품</a>
+                    <!-- 전문가 추천 - x:750, y:49, fontSize:32 -->
+                    <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">전문가 추천</a>
+                </nav>
+                
+                <!-- Right side -->
+                <div class="flex items-center space-x-4" style="margin-right: 40px;">
+                    <!-- 로그인 버튼 - x:1145, y:58, fontSize:20 -->
+                    <button id="mainLoginButton" class="login-button tilt-warp px-6 py-2 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                        로그인
+                    </button>
+                    
+                    <!-- 다크모드 토글 - 피그마 토글 버튼 위치 -->
+                    <div class="relative">
+                        <button id="darkModeToggle" class="toggle-button w-20 h-11 rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: rgba(0,0,0,0.1);">
+                            <div class="toggle-circle w-10 h-10 rounded-full shadow-md flex items-center justify-center" style="background-color: var(--figma-white);">
+                                <!-- 라이트모드: 달 아이콘 (다크모드로 전환) -->
+                                <svg id="lightIcon" class="w-6 h-6 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                </svg>
+                                <!-- 다크모드: 해 아이콘 (라이트모드로 전환) -->
+                                <svg id="darkIcon" class="w-6 h-6 text-gray-600 hidden dark:block" fill="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="5"/>
+                                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content - 피그마 메인 섹션 정확히 재현 -->
+    <main class="min-h-screen" style="background-color: var(--figma-white);">
+        <div class="figma-container py-20">
+            <!-- Hero Section - 피그마 정확한 위치와 크기 -->
+            <div class="text-center space-y-8">
+                <!-- Main Title - 피그마: x:349, y:439, fontSize:70 -->
+                <h2 class="tilt-warp hero-title font-normal leading-tight" style="font-size: 70px; color: var(--figma-black); margin-top: 100px;">
+                    어떤 PC가 필요하신가요?
+                </h2>
+                
+                <!-- Subtitle - 피그마: x:147, y:550, fontSize:28 -->
+                <p class="tilt-warp hero-subtitle font-normal max-w-4xl mx-auto leading-relaxed" style="font-size: 28px; color: var(--figma-gray-600);">
+                    AI와 함께 이야기 하며 맞춤형 컴퓨터 견적을 받아보세요
+                </p>
+                
+                <!-- Search Section - 피그마 정확한 위치와 크기 -->
+                <div class="max-w-2xl mx-auto mt-16">
+                    <div class="flex flex-col sm:flex-row gap-4 items-center">
+                        <!-- Input Field - 피그마 Rectangle 2: x:402, y:632, width:467, height:62 -->
+                        <div class="flex-1 w-full">
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    placeholder="예: 롤이 잘 돌아가는 저가형 PC 추천해줘"
+                                    class="tilt-neon w-full px-6 py-4 text-xl rounded-lg border-0 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px; height: 62px;"
+                                >
+                            </div>
+                        </div>
+                        
+                        <!-- Search Button - 피그마: x:909, y:651, fontSize:22 -->
+                        <button class="tilt-neon px-8 py-4 rounded-lg hover:opacity-80 transition-opacity whitespace-nowrap" style="font-size: 22px; background-color: var(--figma-black); color: var(--figma-white); height: 62px;">
+                            질문하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Login Screen - 피그마 로그인 화면 정확히 재현 -->
+    <div id="loginScreen" class="fixed inset-0 bg-white dark:bg-gray-900 hidden" style="background-color: var(--figma-white); z-index: 1000;">
+        <!-- Header -->
+        <header class="figma-header" style="background-color: var(--figma-white); border-bottom-color: var(--figma-border);">
+            <div class="figma-container">
+                <div class="flex justify-between items-center h-full">
+                    <!-- Logo -->
+                    <div class="flex items-center" style="margin-left: 40px;">
+                        <h1 class="tilt-warp text-4xl font-normal" style="font-size: 36px; color: var(--figma-black);">
+                            PC Builder
+                        </h1>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <nav class="hidden md:flex items-center space-x-8">
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">견적</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">제품</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">전문가 추천</a>
+                    </nav>
+                    
+                    <!-- Right side -->
+                    <div class="flex items-center space-x-4" style="margin-right: 40px;">
+                        <button class="login-button tilt-warp px-6 py-2 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                            로그인
+                        </button>
+                        
+                        <!-- 다크모드 토글 -->
+                        <div class="relative">
+                            <button id="darkModeToggleLogin" class="toggle-button w-20 h-11 rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: rgba(0,0,0,0.1);">
+                                <div class="toggle-circle w-10 h-10 rounded-full shadow-md flex items-center justify-center" style="background-color: var(--figma-white);">
+                                    <!-- 라이트모드: 달 아이콘 (다크모드로 전환) -->
+                                    <svg id="lightIconLogin" class="w-6 h-6 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                    </svg>
+                                    <!-- 다크모드: 해 아이콘 (라이트모드로 전환) -->
+                                    <svg id="darkIconLogin" class="w-6 h-6 text-gray-600 hidden dark:block" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Login Form -->
+        <div class="flex items-center justify-center min-h-screen py-20">
+            <div class="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-300 dark:border-gray-600" style="width: 558px; height: 576px; background-color: var(--figma-white); border-color: #d2d2d2;">
+                <div class="text-center space-y-6">
+                    <!-- Login Title -->
+                    <div class="flex justify-between items-center">
+                        <h2 class="tilt-warp text-3xl font-normal" style="font-size: 32px; color: var(--figma-black);">로그인</h2>
+                        <button id="backToMain" class="tilt-warp text-lg hover:opacity-80" style="font-size: 20px; color: var(--figma-black);">뒤로가기</button>
+                    </div>
+                    
+                    <!-- Subtitle -->
+                    <p class="tilt-neon text-lg" style="font-size: 18px; color: #9d9d9d;">
+                        계정에 로그인 하여 PC Builder를 이용하세요
+                    </p>
+                    
+                    <!-- Form -->
+                    <div class="space-y-6 mt-8">
+                        <!-- Username -->
+                        <div class="text-left">
+                            <label class="tilt-warp block text-lg mb-2" style="font-size: 20px; color: var(--figma-black);">사용자명</label>
+                            <input 
+                                id="loginUsername"
+                                type="text" 
+                                placeholder="아이디를 입력하세요"
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px;"
+                            >
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="text-left">
+                            <label class="tilt-warp block text-lg mb-2" style="font-size: 20px; color: var(--figma-black);">비밀번호</label>
+                            <input 
+                                id="loginPassword"
+                                type="password" 
+                                placeholder="비밀번호를 입력하세요"
+                                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px;"
+                            >
+                        </div>
+                        
+                        <!-- Login Button -->
+                        <button id="loginSubmit" class="login-button w-full tilt-warp py-3 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                            로그인
+                        </button>
+                        
+                        <!-- Signup Link -->
+                        <div class="text-center">
+                            <span class="tilt-warp text-lg" style="font-size: 20px; color: #a1a1a1;">계정이 없으신가요? </span>
+                            <button class="tilt-warp text-lg hover:underline" style="font-size: 20px; color: #155dfc;">회원가입</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chatbot Screen - 피그마 챗봇화면 정확히 재현 -->
+    <div id="chatbotScreen" class="fixed inset-0 bg-white dark:bg-gray-900 hidden" style="background-color: var(--figma-white); z-index: 1000;">
+        <!-- Header -->
+        <header class="figma-header" style="background-color: var(--figma-white); border-bottom-color: var(--figma-border);">
+            <div class="figma-container">
+                <div class="flex justify-between items-center h-full">
+                    <!-- Logo -->
+                    <div class="flex items-center" style="margin-left: 40px;">
+                        <h1 class="tilt-warp text-4xl font-normal" style="font-size: 36px; color: var(--figma-black);">
+                            PC Builder
+                        </h1>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <nav class="hidden md:flex items-center space-x-8">
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">견적</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">제품</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">전문가 추천</a>
+                    </nav>
+                    
+                    <!-- Right side -->
+                    <div class="flex items-center space-x-4" style="margin-right: 40px;">
+                        <button id="chatHeaderLoginButton" class="login-button tilt-warp px-6 py-2 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                            로그인
+                        </button>
+                        
+                        <!-- 다크모드 토글 -->
+                        <div class="relative">
+                            <button id="darkModeToggleChatbot" class="toggle-button w-20 h-11 rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: rgba(0,0,0,0.1);">
+                                <div class="toggle-circle w-10 h-10 rounded-full shadow-md flex items-center justify-center" style="background-color: var(--figma-white);">
+                                    <!-- 라이트모드: 달 아이콘 (다크모드로 전환) -->
+                                    <svg id="lightIconChatbot" class="w-6 h-6 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                    </svg>
+                                    <!-- 다크모드: 해 아이콘 (라이트모드로 전환) -->
+                                    <svg id="darkIconChatbot" class="w-6 h-6 text-gray-600 hidden dark:block" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Chatbot Content -->
+        <div class="flex items-center justify-center min-h-screen py-20">
+            <div class="w-full max-w-6xl mx-auto px-4">
+                <!-- Title Section -->
+                <div class="text-center space-y-6 mb-12">
+                    <h2 class="tilt-warp text-5xl font-normal" style="font-size: 50px; color: var(--figma-black);">
+                        지금 바로 이용해보세요
+                    </h2>
+                    <p class="tilt-warp text-2xl font-normal max-w-4xl mx-auto" style="font-size: 25px; color: var(--figma-gray-600);">
+                        AI와 대화하거나 예산을 입력하여 맞춤형 PC견적을 받아보세요
+                    </p>
+                </div>
+
+                <!-- Chat Container -->
+                <div class="chatbot-container bg-gray-100 dark:bg-gray-800 rounded-3xl p-8 border border-gray-300 dark:border-gray-600" style="background-color: var(--figma-gray-100); border-color: var(--figma-border); border-radius: 38px; height: 637px;">
+                    <!-- Chat Header -->
+                    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-300 dark:border-gray-600" style="border-bottom-color: var(--figma-border);">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                                <span class="text-white font-bold text-lg">AI</span>
+                            </div>
+                            <div>
+                                <h3 class="tilt-warp text-xl font-normal" style="font-size: 21px; color: var(--figma-black);">견적 AI 지니</h3>
+                            </div>
+                        </div>
+                        <button id="backToMainFromChat" class="tilt-warp text-lg hover:opacity-80" style="font-size: 21px; color: var(--figma-black);">뒤로가기</button>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div id="chatMessages" class="space-y-4 mb-6 overflow-y-auto" style="height: 400px;">
+                        <!-- AI Message -->
+                        <div class="flex justify-start">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-white font-bold text-lg">AI</span>
+                                </div>
+                                <div class="chat-message-ai rounded-2xl px-4 py-3 max-w-md" style="background-color: #d2e0ff;">
+                                    <p class="tilt-warp text-lg" style="font-size: 23px; color: var(--figma-black);">
+                                        "롤이 잘 돌아가는 저가형 PC 추천해줘" 에 맞게 견적을 맞춰드릴께요.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Message -->
+                        <div class="flex justify-end">
+                            <div class="chat-message-user rounded-2xl px-4 py-3 max-w-md" style="background-color: #d2e0ff;">
+                                <p class="tilt-warp text-lg" style="font-size: 23px; color: var(--figma-black);">
+                                    "롤이 잘 돌아가는 저가형 PC 추천해줘"
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- AI Response -->
+                        <div class="flex justify-start">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-white font-bold text-lg">AI</span>
+                                </div>
+                                <div class="chat-message-ai rounded-2xl px-4 py-3 max-w-md" style="background-color: #d2e0ff;">
+                                    <p class="tilt-warp text-lg" style="font-size: 23px; color: var(--figma-black);">
+                                        [컴퓨터 견적 내용]
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Follow-up -->
+                        <div class="flex justify-end">
+                            <div class="chat-message-user rounded-2xl px-4 py-3 max-w-md" style="background-color: #d2e0ff;">
+                                <p class="tilt-warp text-lg" style="font-size: 23px; color: var(--figma-black);">
+                                    "다른거 또 있어?"
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input -->
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1">
+                            <input 
+                                type="text" 
+                                id="chatInput"
+                                placeholder="메세지를 입력하세요."
+                                class="chat-input w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: #d9d9d9; color: #717171; font-size: 23px; border-radius: 12px;"
+                            >
+                        </div>
+                        <button id="sendMessage" class="bg-blue-500 hover:bg-blue-600 text-white rounded-xl px-4 py-3 transition-colors" style="background-color: #155dfc; border-radius: 12px;">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signup Screen - 피그마 회원가입 화면 정확히 재현 -->
+    <div id="signupScreen" class="fixed inset-0 bg-white dark:bg-gray-900 hidden" style="background-color: var(--figma-white); z-index: 1000;">
+        <!-- Header -->
+        <header class="figma-header" style="background-color: var(--figma-white); border-bottom-color: var(--figma-border);">
+            <div class="figma-container">
+                <div class="flex justify-between items-center h-full">
+                    <!-- Logo -->
+                    <div class="flex items-center" style="margin-left: 40px;">
+                        <h1 class="tilt-warp text-4xl font-normal" style="font-size: 36px; color: var(--figma-black);">
+                            PC Builder
+                        </h1>
+                    </div>
+                    
+                    <!-- Navigation -->
+                    <nav class="hidden md:flex items-center space-x-8">
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">견적</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">제품</a>
+                        <a href="#" class="tilt-warp nav-text font-normal" style="font-size: 32px; color: var(--figma-gray-500);">전문가 추천</a>
+                    </nav>
+                    
+                    <!-- Right side -->
+                    <div class="flex items-center space-x-4" style="margin-right: 40px;">
+                        <button class="login-button tilt-warp px-6 py-2 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                            로그인
+                        </button>
+                        
+                        <!-- 다크모드 토글 -->
+                        <div class="relative">
+                            <button id="darkModeToggleSignup" class="toggle-button w-20 h-11 rounded-full p-1 focus:outline-none focus:ring-2 focus:ring-blue-500" style="background-color: rgba(0,0,0,0.1);">
+                                <div class="toggle-circle w-10 h-10 rounded-full shadow-md flex items-center justify-center" style="background-color: var(--figma-white);">
+                                    <!-- 라이트모드: 달 아이콘 (다크모드로 전환) -->
+                                    <svg id="lightIconSignup" class="w-6 h-6 text-gray-600 dark:hidden" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                                    </svg>
+                                    <!-- 다크모드: 해 아이콘 (라이트모드로 전환) -->
+                                    <svg id="darkIconSignup" class="w-6 h-6 text-gray-600 hidden dark:block" fill="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="5"/>
+                                        <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                                    </svg>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Signup Form -->
+        <div class="flex items-center justify-center min-h-screen py-20">
+            <div class="signup-container bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-lg border border-gray-300 dark:border-gray-600" style="width: 558px; height: 746px; background-color: var(--figma-white); border-color: #d2d2d2; border-radius: 30px;">
+                <div class="text-center space-y-6">
+                    <!-- Signup Title -->
+                    <div class="flex justify-between items-center">
+                        <h2 class="tilt-warp text-3xl font-normal" style="font-size: 32px; color: var(--figma-black);">회원가입</h2>
+                        <button id="backToMainFromSignup" class="tilt-warp text-lg hover:opacity-80" style="font-size: 20px; color: var(--figma-black);">뒤로가기</button>
+                    </div>
+                    
+                    <!-- Subtitle -->
+                    <p class="tilt-neon signup-subtitle text-lg" style="font-size: 18px; color: #9d9d9d;">
+                        PC Builder 계정을 만들어 시작하세요.
+                    </p>
+                    
+                    <!-- Form -->
+                    <div class="space-y-6 mt-8">
+                        <!-- Name -->
+                        <div class="text-left">
+                            <label class="tilt-warp signup-label block text-lg mb-2" style="font-size: 20px; color: var(--figma-black);">이름</label>
+                            <input 
+                                type="text" 
+                                id="signupName"
+                                placeholder="홍길동"
+                                class="signup-input w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px;"
+                            >
+                        </div>
+                        
+                        <!-- Username -->
+                        <div class="text-left">
+                            <label class="tilt-warp signup-label block text-lg mb-2" style="font-size: 20px; color: var(--figma-black);">아이디</label>
+                            <input 
+                                type="text" 
+                                id="signupUsername"
+                                placeholder="아이디를 입력하세요"
+                                class="signup-input w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px;"
+                            >
+                        </div>
+                        
+                        <!-- Password -->
+                        <div class="text-left">
+                            <label class="tilt-warp signup-label block text-lg mb-2" style="font-size: 20px; color: var(--figma-black);">비밀번호</label>
+                            <input 
+                                type="password" 
+                                id="signupPassword"
+                                placeholder="비밀번호를 입력하세요 (6자 이상)"
+                                class="signup-input w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                style="background-color: var(--figma-gray-100); color: var(--figma-gray-700); font-size: 20px;"
+                            >
+                        </div>
+                        
+                        <!-- Signup Button -->
+                        <button id="signupSubmit" class="login-button w-full tilt-warp py-3 rounded-lg hover:opacity-80" style="font-size: 20px;">
+                            회원가입
+                        </button>
+                        
+                        <!-- Login Link -->
+                        <div class="text-center">
+                            <span class="tilt-warp text-lg" style="font-size: 20px; color: #a1a1a1;">이미 계정이 있으신가요? </span>
+                            <button id="goToLogin" class="tilt-warp text-lg hover:underline" style="font-size: 20px; color: #155dfc;">로그인</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
