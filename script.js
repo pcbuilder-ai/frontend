@@ -81,39 +81,14 @@ class APIService {
     }
 
     // 챗봇 메시지 전송 API (OpenAI Chat Completions)
+    // GPT 직접 호출 대신 백엔드(Spring → FastAPI)로 요청 위임 
     async sendChatMessage(message) {
-        const prompt = `당신은 PC 견적 전문가입니다. 사용자의 요청에 따라 적절한 PC 견적을 제공해주세요.
-        
-사용자 요청: ${message}
-
-다음 형식으로 응답해주세요:
-💻 **추천 사양**
-• CPU: [CPU 모델]
-• GPU: [GPU 모델] 
-• RAM: [메모리 용량]
-• SSD: [저장장치 용량]
-• 기타: [기타 부품]
-
-💰 **예상 가격: [가격]**
-
-[추가 설명 및 추천 이유]`;
-
         return await this.request(API_CONFIG.ENDPOINTS.CHAT, {
             method: 'POST',
             body: JSON.stringify({
-                model: "gpt-4o-mini",
                 messages: [
-                    {
-                        role: "system",
-                        content: "당신은 PC 견적 전문가입니다. 사용자의 요청에 따라 적절한 PC 견적을 제공해주세요."
-                    },
-                    {
-                        role: "user",
-                        content: message
-                    }
-                ],
-                max_tokens: 1000,
-                temperature: 0.7
+                    { role: "user", content: message }
+                ]
             })
         });
     }
@@ -785,14 +760,13 @@ const chatInput = document.getElementById('chatInput');
 const sendMessageButton = document.getElementById('sendMessage');
 const chatMessages = document.getElementById('chatMessages');
 
-// 질문하기 버튼 클릭시 챗봇 화면 표시
 searchButton.addEventListener('click', () => {
-    const query = searchInput.value.trim();
-    if (query) {
-        chatbotScreen.classList.remove('hidden');
-        // 기존 메시지에 사용자 질문 추가
-        addUserMessage(query);
-    }
+    chatbotScreen.classList.remove('hidden');
+    chatMessages.innerHTML = `
+        <div class="text-center text-gray-500 mt-6 tilt-warp text-lg">
+            🔄 견적을 불러오는 중입니다...
+        </div>
+    `;
 });
 
 // 뒤로가기 버튼 클릭시 메인 화면으로 돌아가기
@@ -849,13 +823,13 @@ sendMessageButton.addEventListener('click', async () => {
             addAIMessage(aiResponse);
         } else {
             // API 실패시 기본 응답
-            addAIMessage(getAIResponse(message));
             showNotification('AI 서비스에 일시적인 문제가 있습니다. 기본 응답을 제공합니다.', 'warning');
+            addAIMessage("⚠️ AI 응답을 가져오지 못했습니다. 다시 시도해주세요.");
         }
     } catch (error) {
         // 에러 발생시 기본 응답
-        addAIMessage(getAIResponse(message));
         showNotification('네트워크 오류가 발생했습니다. 기본 응답을 제공합니다.', 'error');
+        addAIMessage("⚠️ 네트워크 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
         // 로딩 상태 해제
         sendMessageButton.innerHTML = originalText;
@@ -890,28 +864,66 @@ function addUserMessage(message) {
 }
 
 // AI 메시지 추가
+// AI 메시지 추가 (JSON 자동 포맷팅)
 function addAIMessage(message) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'flex justify-start';
     const isDark = document.documentElement.classList.contains('dark');
     const bgColor = isDark ? '#333333' : '#d2e0ff';
     const textColor = isDark ? '#ffffff' : '#000000';
-    
+
+    let rendered = '';
+
+    try {
+        // FastAPI에서 견적 JSON으로 온 경우
+        const data = typeof message === 'string' ? JSON.parse(message) : message;
+
+        if (typeof data === 'object' && data.cpu && data.total_price) {
+            rendered += `<div class="tilt-warp text-lg" style="font-size: 22px; color:${textColor};">`;
+            rendered += `<b>💻 견적 결과</b><br><br>`;
+
+            for (const [key, item] of Object.entries(data)) {
+                if (key === "total_price") continue;
+
+                const label = key.toUpperCase();
+                const name = item.name || "-";
+                const price = item.price ? item.price.toLocaleString() + "원" : "-";
+                const link = item.link ? `<a href="${item.link}" target="_blank" style="color:#1a73e8;">🔗 상품 보기</a>` : "";
+
+                rendered += `
+                    <div style="margin-bottom:8px;">
+                        <b>${label}</b><br>
+                        ${name}<br>
+                        <span style="color:#555;">${price}</span><br>
+                        ${link}
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid #ccc; margin: 8px 0;">
+                `;
+            }
+
+            rendered += `<b>💰 총합:</b> ${data.total_price.toLocaleString()}원<br>`;
+            rendered += `</div>`;
+        } else {
+            rendered = message; // 일반 텍스트 응답일 경우
+        }
+    } catch {
+        rendered = message; // JSON 파싱 실패 시 원문 출력
+    }
+
     messageDiv.innerHTML = `
         <div class="flex items-start space-x-3">
             <div class="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                 <span class="text-white font-bold text-lg">AI</span>
             </div>
             <div class="chat-message-ai rounded-2xl px-4 py-3 max-w-md" style="background-color: ${bgColor};">
-                <p class="tilt-warp text-lg" style="font-size: 23px; color: ${textColor};">
-                    ${message}
-                </p>
+                ${rendered}
             </div>
         </div>
     `;
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
+
 
 // 회원가입 화면 기능
 const signupScreen = document.getElementById('signupScreen');
@@ -1012,31 +1024,3 @@ signupSubmitButton.addEventListener('click', async () => {
         signupSubmitButton.textContent = '회원가입';
     }
 });
-
-// AI 응답 생성 (간단한 시뮬레이션)
-function getAIResponse(userMessage) {
-    const responses = {
-        '롤': '롤(리그 오브 레전드)을 위한 PC 견적을 추천드릴게요!<br><br>💻 **추천 사양**<br>• CPU: AMD Ryzen 5 5600G<br>• GPU: GTX 1660 Super<br>• RAM: 16GB DDR4<br>• SSD: 500GB NVMe<br><br>💰 **예상 가격: 80만원**<br><br>이 사양으로 롤을 고화질로 원활하게 즐길 수 있습니다!',
-        '게임': '게임용 PC 견적을 추천드릴게요!<br><br>🎮 **추천 사양**<br>• CPU: Intel i5-12400F<br>• GPU: RTX 3060<br>• RAM: 16GB DDR4<br>• SSD: 1TB NVMe<br><br>💰 **예상 가격: 120만원**<br><br>최신 게임들을 고화질로 즐길 수 있는 사양입니다!',
-        '저가': '저가형 PC 견적을 추천드릴게요!<br><br>💡 **추천 사양**<br>• CPU: AMD Ryzen 3 3200G<br>• GPU: 내장 그래픽<br>• RAM: 8GB DDR4<br>• SSD: 250GB<br><br>💰 **예상 가격: 40만원**<br><br>일반적인 업무와 가벼운 게임에 적합합니다!',
-        '고사양': '고사양 PC 견적을 추천드릴게요!<br><br>🚀 **추천 사양**<br>• CPU: Intel i7-13700K<br>• GPU: RTX 4070<br>• RAM: 32GB DDR5<br>• SSD: 2TB NVMe<br><br>💰 **예상 가격: 250만원**<br><br>최고급 게임과 작업에 최적화된 사양입니다!'
-    };
-    
-    // 키워드 기반 응답
-    for (const [keyword, response] of Object.entries(responses)) {
-        if (userMessage.includes(keyword)) {
-            return response;
-        }
-    }
-    
-    // 기본 응답
-    return `"${userMessage}"에 대한 PC 견적을 분석하고 있습니다...<br><br>💻 **추천 사양**<br>• CPU: AMD Ryzen 5 5600X<br>• GPU: RTX 3060<br>• RAM: 16GB DDR4<br>• SSD: 500GB NVMe<br><br>💰 **예상 가격: 100만원**<br><br>더 구체적인 요구사항을 알려주시면 더 정확한 견적을 제공해드릴 수 있습니다!`;
-}
-
-
-
-
-
-
-
-
