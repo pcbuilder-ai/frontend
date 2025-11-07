@@ -15,7 +15,9 @@ class APIService {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        const config = { headers: this.getHeaders(), ...options };
+        const config = { headers: this.getHeaders(), 
+                        credentials: 'include',
+                        ...options };
         try {
             const response = await fetch(url, config);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);

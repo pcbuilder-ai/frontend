@@ -49,6 +49,24 @@ export default function App() {
     }, [isDark]);
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatMessages]);
+    useEffect(() => {
+        fetch('/api/auth/check', { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.loggedIn) {
+            const { username, name } = data.user;   // ← 둘 다 받기
+            localStorage.setItem('userUsername', username);
+            localStorage.setItem('userName', name);
+            setUser({ username, name });
+            } else {
+            localStorage.removeItem('userUsername');
+            localStorage.removeItem('userName');
+            setUser(null);
+        }
+        })
+        .catch(() => setUser(null));
+    }, []);
+
 
     const showNotification = (message, type = 'info') => {
         const existing = document.querySelector('.notification');
@@ -82,43 +100,62 @@ export default function App() {
         }, 5000);
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('userUsername');
-        localStorage.removeItem('userName');
-        setUser(null);
-        showNotification('로그아웃되었습니다.', 'info');
-    };
+    const handleLogout = async () => {
+    try {
+        // ✅ 서버에도 로그아웃 요청 (세션 무효화)
+        await fetch('/api/logout', {
+            method: 'POST',
+            credentials: 'include', // 세션 쿠키 포함
+        });
+    } catch (err) {
+        console.warn('서버 로그아웃 요청 실패:', err);
+    }
 
-    const handleLogin = async () => {
-        if (!loginUsername || !loginPassword) { showNotification('사용자명과 비밀번호를 입력해주세요.', 'error'); return; }
-        setLoginLoading(true);
-        try {
-            const result = await apiService.login(loginUsername, loginPassword);
-            if (result.success && result.data?.data?.success) {
-                const username = result.data.data.user.username;
-                localStorage.setItem('userToken', 'backend-token');
-                localStorage.setItem('userUsername', username);
-                localStorage.setItem('userName', username);
-                setUser({ token: 'backend-token', username, name: username });
-                setScreen('main');
-                setLoginUsername(''); setLoginPassword('');
-                showNotification(`로그인 성공! 환영합니다, ${username}님`, 'success');
-            } else {
-                const isAuthFail =
-                    String(result?.message || result?.error || '').includes('401') ||
-                    /인증|unauthorized|invalid/i.test(String(result?.message || ''));
-                showNotification(
-                    isAuthFail
-                        ? '아이디 또는 비밀번호가 올바르지 않습니다.'
-                        : (result?.data?.message || '로그인 중 오류가 발생했습니다.'),
-                    'error'
-                );
-            }
-        } catch {
-            showNotification('로그인 중 오류가 발생했습니다.', 'error');
-        } finally { setLoginLoading(false); }
-    };
+    // ✅ 클라이언트 상태 초기화
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userUsername');
+    localStorage.removeItem('userName');
+    setUser(null);
+    showNotification('로그아웃되었습니다.', 'info');
+};
+
+
+  const handleLogin = async () => {
+    if (!loginUsername || !loginPassword) {
+        showNotification('사용자명과 비밀번호를 입력해주세요.', 'error');
+        return;
+    }
+    setLoginLoading(true);
+    try {
+        const result = await apiService.login(loginUsername, loginPassword);
+
+        // ✅ 백엔드 응답 구조: { success:true, message:"로그인 성공", user:{id, username, name} }
+        const data = result.data;
+
+        if (result.success && data?.success) {
+            const username = data.user.username;
+            const name = data.user.name;
+
+            // ✅ 세션 기반 로그인: 토큰 불필요
+            localStorage.setItem('userUsername', username);
+            localStorage.setItem('userName', name);
+            setUser({ username, name });
+
+            // ✅ 화면 전환 + 알림
+            setScreen('main');
+            setLoginUsername('');
+            setLoginPassword('');
+            showNotification(`로그인 성공! 환영합니다, ${name}님`, 'success');
+        } else {
+            showNotification(data?.message || '로그인에 실패했습니다.', 'error');
+        }
+    } catch (err) {
+        showNotification('로그인 중 오류가 발생했습니다.', 'error');
+    } finally {
+        setLoginLoading(false);
+    }
+};
+
 
     const getFallbackAIResponse = (q) => `입력하신 요청("${q}")에 대한 기본 견적을 준비 중입니다.`;
 

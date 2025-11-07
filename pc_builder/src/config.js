@@ -1,6 +1,6 @@
 // React용 ESM 구성 (pc_builder/src/config.js로 복사)
 const BASE_CONFIG = {
-    BASE_URL: 'http://localhost:8080',
+    BASE_URL: 'http://localhost:8081',
     API_KEY: 'test-api-key',
     ENDPOINTS: {
         LOGIN: '/api/login',
