@@ -10,7 +10,7 @@ const BASE_CONFIG = {
         SECURE: '/secure',
         PRODUCTS: '/api/products',
         ESTIMATE: '/api/estimate',
-        CHAT: '/api/chat'
+        CHAT: '/api/ai/chat'
     },
     TIMEOUT: 10000,
     RETRY: { MAX_ATTEMPTS: 3, DELAY: 1000 }
