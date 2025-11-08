@@ -15,15 +15,21 @@ class APIService {
 
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        const config = { headers: this.getHeaders(), 
-                        credentials: 'include',
-                        ...options };
+        const config = {
+            headers: this.getHeaders(),
+            credentials: 'include',
+            ...options
+        };
         try {
             const response = await fetch(url, config);
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            const data = await response.json();
-            if (data && data.success === false) return { success: false, data };
-            return { success: true, data };
+            let data = null;
+            try { data = await response.clone().json(); } catch (_) {}
+            return {
+                success: response.ok,
+                status: response.status,
+                data,
+                message: data?.message || (response.ok ? undefined : this.getErrorMessage(new Error(String(response.status))))
+            };
         } catch (error) {
             return { success: false, error: error.message, message: this.getErrorMessage(error) };
         }
@@ -46,13 +52,20 @@ class APIService {
     }
 
     async sendChatMessage(message, sessionId) {
-        return await this.request(API_CONFIG.ENDPOINTS.CHAT, {
-            method: 'POST',
-            body: JSON.stringify({
-                session_id: sessionId,
-                messages: [{ role: 'user', content: message }]
-            })
+        const body = JSON.stringify({
+            session_id: sessionId,
+            messages: [{ role: 'user', content: message }]
         });
+        // 1차: 표준 엔드포인트
+        let res = await this.request(API_CONFIG.ENDPOINTS.CHAT, {
+            method: 'POST',
+            body
+        });
+        // 404/405면 구엔드포인트로 1회 재시도
+        if (!res.success && (res.status === 404 || res.status === 405)) {
+            res = await this.request('/api/ai/chat', { method: 'POST', body });
+        }
+        return res;
     }
 
     async getProducts(category = '') {
@@ -60,9 +73,35 @@ class APIService {
         return await this.request(endpoint, { method: 'GET' });
     }
 
+    async getEstimateList() {
+        return await this.request(API_CONFIG.ENDPOINTS.ESTIMATE_LIST, { method: 'GET' });
+    }
+
     async requestEstimate(requirements, sessionId) {
         const query = requirements.query || requirements;
         return await this.sendChatMessage(query, sessionId);
+    }
+
+    async saveEstimate(estimateObject, sessionId) {
+        // 서버는 title, totalPrice를 상위 레벨에서 기대하므로(없으면 기본값으로 저장) 함께 전송
+        const payload = {
+            session_id: sessionId,
+            title: estimateObject?.title || 'AI 추천 견적',
+            totalPrice: typeof estimateObject?.total_price === 'number'
+                ? Math.round(estimateObject.total_price)
+                : (typeof estimateObject?.totalPrice === 'number' ? Math.round(estimateObject.totalPrice) : 0),
+            estimate: estimateObject
+        };
+        return await this.request(API_CONFIG.ENDPOINTS.ESTIMATE_SAVE, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+    }
+
+    async deleteEstimate(id) {
+        return await this.request(`${API_CONFIG.ENDPOINTS.ESTIMATE}/${id}`, {
+            method: 'DELETE'
+        });
     }
 }
 

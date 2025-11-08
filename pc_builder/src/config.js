@@ -4,6 +4,8 @@ const BASE_CONFIG = {
     API_KEY: 'test-api-key',
     ENDPOINTS: {
         LOGIN: '/api/login',
+        ESTIMATE_LIST: '/api/estimate/list',
+        ESTIMATE_SAVE: '/api/estimate/save',
         REGISTER: '/api/register',
         USER: '/api/user',
         HOME: '/',
