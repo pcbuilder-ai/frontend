@@ -347,16 +347,24 @@ export default function App() {
         try {
             const res = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REGISTER}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: signupName, username: signupUsername, password: signupPassword }) });
             const result = await res.json();
-            const duplicate =
-                res.status === 409 ||
-                /중복|duplicate|exists|이미/i.test(String(result?.message || result?.data?.message || ''));
-            if (result.success && result.data?.success) {
+
+            // 백엔드는 { success, message, user } 형태를 반환. (혹은 { success, data:{ success, ... } })
+            const backendSuccess = result?.success === true;
+            const nestedSuccess = result?.data?.success === true;
+            const isSuccess = backendSuccess || nestedSuccess;
+            const msg = result?.message || result?.data?.message || '';
+
+            const isDuplicate = res.status === 409 || /중복|duplicate|exists|이미/i.test(String(msg));
+
+            if (isSuccess) {
                 showNotification(`회원가입 성공! 환영합니다, ${signupName}님!`, 'success');
                 setSignupName(''); setSignupUsername(''); setSignupPassword('');
                 setScreen('login');
-            } else if (duplicate) {
+            } else if (isDuplicate) {
                 showNotification('이미 사용 중인 아이디입니다. 다른 아이디를 입력해주세요.', 'error');
-            } else { showNotification(result.data?.message || '회원가입에 실패했습니다.', 'error'); }
+            } else {
+                showNotification(msg || '회원가입에 실패했습니다.', 'error');
+            }
         } catch { showNotification('서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.', 'error'); }
         finally { setSignupLoading(false); }
     };
@@ -601,11 +609,11 @@ export default function App() {
                 <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.4)', zIndex: 2002 }}>
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-[92%] max-w-3xl max-h-[80vh] overflow-auto border border-gray-200 dark:border-gray-700 p-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="tilt-warp text-2xl" style={{ color: 'var(--figma-black)' }}>저장된 견적</h3>
+                            <h3 className="tilt-warp text-2xl" style={{ color: isDark ? '#ffffff' : 'var(--figma-black)' }}>저장된 견적</h3>
                             <button onClick={() => setIsEstimateModalOpen(false)} className="px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 dark:text-white hover:opacity-80">닫기</button>
                         </div>
                         {estimateLoading ? (
-                            <div className="py-10 text-center">불러오는 중...</div>
+                            <div className="py-10 text-center" style={{ color: isDark ? '#ffffff' : undefined }}>불러오는 중...</div>
                         ) : (savedEstimates && savedEstimates.length > 0 ? (
                             <ul className="space-y-3">
                                 {savedEstimates.map((item, idx) => {
@@ -636,12 +644,12 @@ export default function App() {
                                         const price = typeof item.price === 'number' ? item.price.toLocaleString() + '원' : '-';
                                         const link = item.link;
                                         return (
-                                            <div key={key} className="flex items-center justify-between py-1">
+                                            <div key={key} className="flex items-center justify-between py-1" style={{ color: isDark ? '#ffffff' : undefined }}>
                                                 <div>
-                                                    <b>{label}:</b> {name} — <span style={{ color: '#555' }}>{price}</span>
+                                                    <b>{label}:</b> {name} — <span style={{ color: isDark ? '#ffffff' : '#555' }}>{price}</span>
                                                 </div>
                                                 {link ? (
-                                                    <a href={link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                                                    <a href={link} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: isDark ? '#ffffff' : '#1a73e8' }}>
                                                         상품 보기
                                                     </a>
                                                 ) : null}
@@ -652,9 +660,9 @@ export default function App() {
                                     return (
                                         <li key={item?.id || idx} className="p-4 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
                                             <div className="flex items-center justify-between">
-                                                <div className="tilt-warp" style={{ fontSize: 18, color: 'var(--figma-black)' }}>{title}</div>
+                                                <div className="tilt-warp" style={{ fontSize: 18, color: isDark ? '#ffffff' : 'var(--figma-black)' }}>{title}</div>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="tilt-warp" style={{ fontSize: 16, color: 'var(--figma-black)' }}>
+                                                    <div className="tilt-warp" style={{ fontSize: 16, color: isDark ? '#ffffff' : 'var(--figma-black)' }}>
                                                         총합: {typeof total === 'number' ? total.toLocaleString() + '원' : '-'}
                                                     </div>
                                                     <button
@@ -673,7 +681,7 @@ export default function App() {
                                                     {categories.map(([k, label]) => renderLine(k, label))}
                                                 </div>
                                             ) : (
-                                                <div className="mt-3 text-sm" style={{ color: '#555' }}>
+                                                <div className="mt-3 text-sm" style={{ color: isDark ? '#ffffff' : '#555' }}>
                                                     견적 상세를 파싱할 수 없습니다.
                                                 </div>
                                             )}
@@ -682,7 +690,7 @@ export default function App() {
                                 })}
                             </ul>
                         ) : (
-                            <div className="py-10 text-center">표시할 견적이 없습니다.</div>
+                            <div className="py-10 text-center" style={{ color: isDark ? '#ffffff' : undefined }}>표시할 견적이 없습니다.</div>
                         ))}
                     </div>
                 </div>
