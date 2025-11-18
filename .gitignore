@@ -44,3 +44,9 @@ Thumbs.db
 # 백업 파일들
 *.bak
 *.backup
+
+# Vite
+.vite
+
+# Dependencies
+node_modules

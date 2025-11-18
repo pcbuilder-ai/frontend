@@ -200,22 +200,22 @@ export default function App() {
     }
 
     // ✅ 클라이언트 상태 초기화
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userUsername');
-    localStorage.removeItem('userName');
-    setUser(null);
-    showNotification('로그아웃되었습니다.', 'info');
-};
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userUsername');
+        localStorage.removeItem('userName');
+        setUser(null);
+        showNotification('로그아웃되었습니다.', 'info');
+    };
 
 
-  const handleLogin = async () => {
+    const handleLogin = async () => {
     if (!loginUsername || !loginPassword) {
         showNotification('사용자명과 비밀번호를 입력해주세요.', 'error');
         return;
     }
-    setLoginLoading(true);
-    try {
-        const result = await apiService.login(loginUsername, loginPassword);
+        setLoginLoading(true);
+        try {
+            const result = await apiService.login(loginUsername, loginPassword);
 
         // ✅ 백엔드 응답 구조: { success:true, message:"로그인 성공", user:{id, username, name} }
         const data = result.data;
@@ -225,24 +225,24 @@ export default function App() {
             const name = data.user.name;
 
             // ✅ 세션 기반 로그인: 토큰 불필요
-            localStorage.setItem('userUsername', username);
+                localStorage.setItem('userUsername', username);
             localStorage.setItem('userName', name);
             setUser({ username, name });
 
             // ✅ 화면 전환 + 알림
-            setScreen('main');
+                setScreen('main');
             setLoginUsername('');
             setLoginPassword('');
             showNotification(`로그인 성공! 환영합니다, ${name}님`, 'success');
-        } else {
+            } else {
             showNotification(data?.message || '로그인에 실패했습니다.', 'error');
-        }
+            }
     } catch (err) {
-        showNotification('로그인 중 오류가 발생했습니다.', 'error');
+            showNotification('로그인 중 오류가 발생했습니다.', 'error');
     } finally {
         setLoginLoading(false);
     }
-};
+    };
 
 
     const getFallbackAIResponse = (q) => `입력하신 요청("${q}")에 대한 기본 견적을 준비 중입니다.`;
@@ -257,7 +257,7 @@ export default function App() {
         setChatMessages((prev) => [
             ...prev,
             { role: 'user', content: query },
-            { id: placeholderId, role: 'ai', content: '🤖 AI가 열심히 생각 중입니다...\n 🔍 견적을 계산하고 있습니다...\n ⏳ 잠시만 기다려주세요...' }
+            { id: placeholderId, role: 'ai', content: '🤖 AI가 열심히 생각 중입니다...\n🔍 견적을 계산하고 있습니다...\n⏳ 잠시만 기다려주세요...'}
         ]);
         try {
             const result = await apiService.requestEstimate({ query }, sessionId);
@@ -424,7 +424,7 @@ export default function App() {
             <header className="figma-header" style={{ backgroundColor: 'var(--figma-white)', borderBottomColor: 'var(--figma-border)' }}>
                 <div className="figma-container">
                     <div className="flex justify-between items-center h-full">
-                        <div className="flex items-center" style={{ marginLeft: 40 }}>
+                        <div className="flex items-center space-x-8" style={{ marginLeft: 40 }}>
                                     <h1
                                         className="tilt-warp text-4xl font-normal"
                                         style={{ fontSize: 36, color: 'var(--figma-black)', cursor: 'pointer' }}
@@ -432,24 +432,16 @@ export default function App() {
                                     >
                                         PC Builder
                                     </h1>
+                                    <a href="#" className="tilt-warp nav-text font-normal hidden md:block" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
                         </div>
-                        <nav className="hidden md:flex items-center space-x-8">
-                            <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>견적</a>
-                            <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>제품</a>
-                            <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
-                        </nav>
                         <LoginLogoutButtons />
                     </div>
                 </div>
             </header>
 
-            {/* 모바일 전용 3분할 네비게이션 (md 이상에서는 헤더의 기존 네비 사용) */}
+            {/* 모바일 전용 전문가 추천 버튼 */}
             <div className="md:hidden px-5 pt-4">
-                <div className="md:flex md:space-x-4">
-                    <a href="#" className="w-full mb-4 md:w-1/3 md:mb-0 block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>견적</a>
-                    <a href="#" className="w-full mb-4 md:w-1/3 md:mb-0 block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>제품</a>
-                    <a href="#" onClick={(e) => { e.preventDefault(); setScreen('expert'); }} className="w-full md:w-1/3 block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>전문가 추천</a>
-                </div>
+                <a href="#" onClick={(e) => { e.preventDefault(); setScreen('expert'); }} className="w-full block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>전문가 추천</a>
             </div>
 
             {screen === 'main' && (
@@ -474,27 +466,27 @@ export default function App() {
             )}
 
             {screen === 'expert' && (
-                <div className="bg-white dark:bg-gray-900" style={{ backgroundColor: 'var(--figma-white)', zIndex: 1000 }}>
-                    <div className="flex items-center justify-center min-h-screen pt-0 pb-10">
+                <main className="min-h-screen" style={{ backgroundColor: 'var(--figma-white)' }}>
+                    <div className="flex items-center justify-center min-h-screen pt-8 md:pt-0 pb-10">
                         <div className="w-full max-w-7xl mx-auto px-4">
-                            <div className="text-center" style={{ marginTop: -120, marginBottom: 100 }}>
-                                <h1 className="tilt-warp text-6xl font-normal" style={{ fontSize: 60, color: 'var(--figma-black)',marginBottom: 30 }}>전문가 추천 견적</h1>
+                            <div className="text-center mb-10 md:mb-20" style={{ marginTop: 'clamp(40px, 10vh, 120px)' }}>
+                                <h1 className="tilt-warp font-normal mb-4 md:mb-8" style={{ fontSize: 'clamp(32px, 6vw, 60px)', color: 'var(--figma-black)' }}>전문가 추천 견적</h1>
                                 
-                                <p className="tilt-warp text-2xl font-normal" style={{ fontSize: 22, color: 'var(--figma-gray-600)' }}>상황별로 바로 사용할 수 있는 베스트 조합 3가지</p>
+                                <p className="tilt-warp font-normal px-4" style={{ fontSize: 'clamp(16px, 3vw, 22px)', color: 'var(--figma-gray-600)' }}>상황별로 바로 사용할 수 있는 베스트 조합 3가지</p>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
                                 {expertBuilds.map((b) => (
-                                    <div key={b.id} className="rounded-2xl p-8 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800" style={{ borderRadius: 28 }}>
-                                        <div className="tilt-warp text-3xl mb-5" style={{ fontSize: 28, color: 'var(--figma-black)' }}>{b.title}</div>
-                                        <ul className="list-disc pl-7 space-y-2.5" style={{ color: 'var(--figma-gray-700)' }}>
-                                            {b.items.map((line, i) => (<li key={i} style={{ fontSize: 18 }}>{line}</li>))}
+                                    <div key={b.id} className="rounded-2xl p-6 md:p-8 border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800" style={{ borderRadius: 28 }}>
+                                        <div className="tilt-warp text-2xl md:text-3xl mb-4 md:mb-5" style={{ fontSize: 'clamp(22px, 4vw, 28px)', color: 'var(--figma-black)' }}>{b.title}</div>
+                                        <ul className="list-disc pl-5 md:pl-7 space-y-2 md:space-y-2.5" style={{ color: 'var(--figma-gray-700)' }}>
+                                            {b.items.map((line, i) => (<li key={i} style={{ fontSize: 'clamp(14px, 2.5vw, 18px)' }}>{line}</li>))}
                                         </ul>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     </div>
-                </div>
+                </main>
             )}
 
             {screen === 'login' && (
@@ -502,14 +494,10 @@ export default function App() {
                     <header className="figma-header" style={{ backgroundColor: 'var(--figma-white)', borderBottomColor: 'var(--figma-border)' }}>
                         <div className="figma-container">
                             <div className="flex justify-between items-center h-full">
-                                <div className="flex items-center" style={{ marginLeft: 40 }}>
+                                <div className="flex items-center space-x-8" style={{ marginLeft: 40 }}>
                                     <h1 className="tilt-warp text-4xl font-normal" style={{ fontSize: 36, color: 'var(--figma-black)', cursor: 'pointer' }} onClick={() => setScreen('main')}>PC Builder</h1>
+                                    <a href="#" className="tilt-warp nav-text font-normal hidden md:block" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
                                 </div>
-                                <nav className="hidden md:flex items-center space-x-8">
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>견적</a>
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>제품</a>
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
-                                </nav>
                                 <LoginLogoutButtons />
                             </div>
                         </div>
@@ -551,7 +539,7 @@ export default function App() {
                                 <h2 className="tilt-warp text-5xl font-normal" style={{ fontSize: 42, color: 'var(--figma-black)' }}>지금 바로 이용해보세요</h2>
                                 <p className="tilt-warp text-2xl font-normal max-w-4xl mx-auto" style={{ fontSize: 20, color: 'var(--figma-gray-600)' }}>AI와 대화하거나 예산을 입력하여 맞춤형 PC견적을 받아보세요</p>
                             </div>
-                            <div className="chatbot-container bg-gray-100 dark:bg-gray-800 rounded-3xl px-8 pt-8 pb-[2px] border border-gray-300 dark:border-gray-600" style={{ backgroundColor: 'var(--figma-gray-100)', borderColor: 'var(--figma-border)', borderRadius: 38, height: 820 }}>
+                            <div className="chatbot-container bg-gray-100 dark:bg-gray-800 rounded-3xl px-8 pt-8 pb-[2px] border border-gray-300 dark:border-gray-600" style={{ backgroundColor: 'var(--figma-gray-100)', borderColor: 'var(--figma-border)', borderRadius: 38, height: 'calc(100vh - 250px)', minHeight: 600, maxHeight: 900 }}>
                                 <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-300 dark:border-gray-600" style={{ borderBottomColor: 'var(--figma-border)' }}>
                                     <div className="flex items-center space-x-4">
                                         <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center"><span className="text-white font-bold text-sm">AI</span></div>
@@ -559,19 +547,19 @@ export default function App() {
                                     </div>
                                     <button className="tilt-warp text-lg hover:opacity-80" style={{ fontSize: 21, color: 'var(--figma-black)' }} onClick={() => setScreen('main')}>뒤로가기</button>
                                 </div>
-                                <div className="space-y-4 mb-4 overflow-y-auto" style={{ height: 600 }}>
+                                <div className="space-y-4 mb-4 overflow-y-auto" style={{ height: 'calc(100% - 180px)' }}>
                                     {chatMessages.map((m, idx) => (
                                         <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                                             {m.role === 'user' ? (
-                                                <div className="chat-message-user rounded-2xl px-2 py-1 max-w-[85%] md:max-w-[70%]" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff' }}>
+                                                <div className="chat-message-user rounded-2xl px-4 py-2 max-w-[95%] md:max-w-[85%]" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff' }}>
                                                     <p className="tilt-warp text-lg" style={{ fontSize: 18, color: isDark ? '#ffffff' : '#000000' }}>
                                                         {m.content}
                                                     </p>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-start space-x-3">
+                                                <div className="flex items-start space-x-3 max-w-[95%] md:max-w-[90%]">
                                                     <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0"><span className="text-white font-bold text-sm">AI</span></div>
-                                                    <div className="chat-message-ai rounded-2xl px-2 py-1 max-w-[85%] md:max-w-[70%]" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff', color: isDark ? '#ffffff' : '#000000' }}>
+                                                    <div className="chat-message-ai rounded-2xl px-4 py-2 flex-1" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff', color: isDark ? '#ffffff' : '#000000' }}>
                                                         {renderAIMessage(m.content)}
                                                     </div>
                                                 </div>
@@ -624,6 +612,23 @@ export default function App() {
                                     const title = item?.title || raw?.title || `견적 #${idx + 1}`;
                                     const total =
                                         item?.totalPrice ?? raw?.totalPrice ?? raw?.total_price ?? estimate?.total_price;
+                                    
+                                    // 저장 시간 포맷팅 함수
+                                    const formatDate = (dateStr) => {
+                                        if (!dateStr) return '';
+                                        try {
+                                            const date = new Date(dateStr);
+                                            const year = date.getFullYear();
+                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                            const day = String(date.getDate()).padStart(2, '0');
+                                            const hours = String(date.getHours()).padStart(2, '0');
+                                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                                            return `${year}.${month}.${day} ${hours}:${minutes}`;
+                                        } catch (_) {
+                                            return '';
+                                        }
+                                    };
+                                    const createdAt = formatDate(item?.createdAt);
 
                                     // 2) 표시용 카테고리
                                     const categories = [
@@ -659,8 +664,15 @@ export default function App() {
 
                                     return (
                                         <li key={item?.id || idx} className="p-4 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-                                            <div className="flex items-center justify-between">
-                                                <div className="tilt-warp" style={{ fontSize: 18, color: isDark ? '#ffffff' : 'var(--figma-black)' }}>{title}</div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="tilt-warp" style={{ fontSize: 18, color: isDark ? '#ffffff' : 'var(--figma-black)' }}>{title}</div>
+                                                    {createdAt && (
+                                                        <div className="tilt-warp" style={{ fontSize: 14, color: isDark ? '#999999' : '#666666' }}>
+                                                            {createdAt}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div className="flex items-center gap-3">
                                                     <div className="tilt-warp" style={{ fontSize: 16, color: isDark ? '#ffffff' : 'var(--figma-black)' }}>
                                                         총합: {typeof total === 'number' ? total.toLocaleString() + '원' : '-'}
@@ -701,14 +713,10 @@ export default function App() {
                     <header className="figma-header" style={{ backgroundColor: 'var(--figma-white)', borderBottomColor: 'var(--figma-border)' }}>
                         <div className="figma-container">
                             <div className="flex justify-between items-center h-full">
-                                <div className="flex items-center" style={{ marginLeft: 40 }}>
+                                <div className="flex items-center space-x-8" style={{ marginLeft: 40 }}>
                                     <h1 className="tilt-warp text-4xl font-normal" style={{ fontSize: 36, color: 'var(--figma-black)', cursor: 'pointer' }} onClick={() => setScreen('main')}>PC Builder</h1>
+                                    <a href="#" className="tilt-warp nav-text font-normal hidden md:block" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
                                 </div>
-                                <nav className="hidden md:flex items-center space-x-8">
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>견적</a>
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }}>제품</a>
-                                    <a href="#" className="tilt-warp nav-text font-normal" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
-                                </nav>
                                 <LoginLogoutButtons />
                             </div>
                         </div>
