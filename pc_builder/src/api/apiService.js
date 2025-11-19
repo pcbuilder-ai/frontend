@@ -53,8 +53,7 @@ class APIService {
 
     async sendChatMessage(message, sessionId) {
         const body = JSON.stringify({
-            session_id: sessionId,
-            messages: [{ role: 'user', content: message }]
+            message: message
         });
         // 1차: 표준 엔드포인트
         let res = await this.request(API_CONFIG.ENDPOINTS.CHAT, {
@@ -75,6 +74,11 @@ class APIService {
 
     async getEstimateList() {
         return await this.request(API_CONFIG.ENDPOINTS.ESTIMATE_LIST, { method: 'GET' });
+    }
+
+    async getAllEstimates() {
+        // 모든 사용자의 견적 목록 가져오기 (추후 백엔드 API 추가 필요)
+        return await this.request('/api/estimate/all', { method: 'GET' });
     }
 
     async requestEstimate(requirements, sessionId) {
