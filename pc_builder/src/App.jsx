@@ -94,6 +94,13 @@ export default function App() {
     const [savedEstimates, setSavedEstimates] = useState([]);
     const [lastEstimate, setLastEstimate] = useState(null); // 마지막 구조화 견적 저장
 
+    // 견적 갤러리 상태
+    const [galleryEstimates, setGalleryEstimates] = useState([]);
+    const [galleryLoading, setGalleryLoading] = useState(false);
+    const [comparisonList, setComparisonList] = useState([]); // 비교할 견적 목록
+    const [activeTab, setActiveTab] = useState('all'); // 'my' 또는 'all'
+    const [myEstimates, setMyEstimates] = useState([]); // 내 견적 목록
+
     useEffect(() => {
         const html = document.documentElement;
         if (isDark) html.classList.add('dark'); else html.classList.remove('dark');
@@ -118,6 +125,23 @@ export default function App() {
         })
         .catch(() => setUser(null));
     }, []);
+
+    // 갤러리 화면 진입 시 데이터 로드
+    useEffect(() => {
+        if (screen === 'gallery') {
+            loadGalleryEstimates();
+            if (user) {
+                loadMyEstimates();
+            }
+        }
+    }, [screen]);
+
+    // 탭 전환 시 데이터 로드
+    useEffect(() => {
+        if (screen === 'gallery' && activeTab === 'my' && user && myEstimates.length === 0) {
+            loadMyEstimates();
+        }
+    }, [activeTab]);
 
 
     const showNotification = (message, type = 'info') => {
@@ -188,6 +212,44 @@ export default function App() {
         }
     };
 
+    const loadGalleryEstimates = async () => {
+        setGalleryLoading(true);
+        try {
+            const res = await apiService.getAllEstimates();
+            if (res.success) {
+                const list = res.data?.estimates || res.data?.data || [];
+                setGalleryEstimates(Array.isArray(list) ? list : []);
+            } else {
+                showNotification(res.message || '견적 목록을 불러오지 못했습니다.', 'error');
+            }
+        } catch {
+            showNotification('견적 목록 조회 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setGalleryLoading(false);
+        }
+    };
+
+    const loadMyEstimates = async () => {
+        if (!user) {
+            showNotification('로그인이 필요합니다.', 'warning');
+            return;
+        }
+        setGalleryLoading(true);
+        try {
+            const res = await apiService.getEstimateList();
+            if (res.success) {
+                const list = res.data?.estimates || res.data?.data || [];
+                setMyEstimates(Array.isArray(list) ? list : []);
+            } else {
+                showNotification(res.message || '내 견적 목록을 불러오지 못했습니다.', 'error');
+            }
+        } catch {
+            showNotification('내 견적 목록 조회 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setGalleryLoading(false);
+        }
+    };
+
     const handleLogout = async () => {
     try {
         // ✅ 서버에도 로그아웃 요청 (세션 무효화)
@@ -204,6 +266,18 @@ export default function App() {
         localStorage.removeItem('userUsername');
         localStorage.removeItem('userName');
         setUser(null);
+        
+        // ✅ 모든 상태 초기화
+        setScreen('main'); // 메인 화면으로 이동
+        setChatMessages([]); // 채팅 메시지 초기화
+        setLastEstimate(null); // 마지막 견적 초기화
+        setSavedEstimates([]); // 저장된 견적 초기화
+        setGalleryEstimates([]); // 갤러리 견적 초기화
+        setMyEstimates([]); // 내 견적 초기화
+        setComparisonList([]); // 비교 목록 초기화
+        setActiveTab('all'); // 탭 초기화
+        setSearchText(''); // 검색 텍스트 초기화
+        
         showNotification('로그아웃되었습니다.', 'info');
     };
 
@@ -261,7 +335,9 @@ export default function App() {
         ]);
         try {
             const result = await apiService.requestEstimate({ query }, sessionId);
-            const aiResponse = result.success
+            // 백엔드 응답의 success 필드도 체크
+            const isSuccess = result.success && result.data?.success !== false;
+            const aiResponse = isSuccess
                 ? (result.data?.choices?.[0]?.message?.content || result.data?.estimate || result.data?.response || result.data?.message || (typeof result.data === 'string' ? result.data : JSON.stringify(result.data)))
                 : null;
             setChatMessages((prev) =>
@@ -274,7 +350,7 @@ export default function App() {
                 if (parsed && typeof parsed === 'object' && parsed.cpu && parsed.total_price !== undefined) structured = parsed;
             } catch (_) {}
             setLastEstimate(structured);
-            if (!result.success) showNotification('견적 서비스에 일시적인 문제가 있습니다. 기본 응답을 제공합니다.', 'warning');
+            if (!isSuccess) showNotification(result.data?.message || '견적 서비스에 일시적인 문제가 있습니다. 기본 응답을 제공합니다.', 'warning');
         } catch {
             setChatMessages((prev) =>
                 prev.map((m) => m.id === placeholderId ? { ...m, content: getFallbackAIResponse(query) } : m)
@@ -296,7 +372,9 @@ export default function App() {
         setSending(true);
         try {
             const result = await apiService.sendChatMessage(message, sessionId);
-            const aiResponse = result.success
+            // 백엔드 응답의 success 필드도 체크
+            const isSuccess = result.success && result.data?.success !== false;
+            const aiResponse = isSuccess
                 ? (result.data?.choices?.[0]?.message?.content
                     || result.data?.estimate
                     || result.data?.response
@@ -313,7 +391,7 @@ export default function App() {
                 if (parsed && typeof parsed === 'object' && parsed.cpu && parsed.total_price !== undefined) structured = parsed;
             } catch (_) {}
             setLastEstimate(structured);
-            if (!result.success) showNotification('AI 서비스에 일시적인 문제가 있습니다. 기본 응답을 제공합니다.', 'warning');
+            if (!isSuccess) showNotification(result.data?.message || 'AI 서비스에 일시적인 문제가 있습니다. 기본 응답을 제공합니다.', 'warning');
         } catch {
             showNotification('네트워크 오류가 발생했습니다. 기본 응답을 제공합니다.', 'error');
             setChatMessages((prev) =>
@@ -370,21 +448,20 @@ export default function App() {
     };
 
     const renderAIMessage = (content) => {
-        const dark = document.documentElement.classList.contains('dark');
         try {
             const data = typeof content === 'string' ? JSON.parse(content) : content;
             if (data && typeof data === 'object' && data.cpu && data.total_price) {
                 const entries = Object.entries(data).filter(([k]) => k !== 'total_price');
                 return (
-                    <div className="tilt-warp" style={{ fontSize: 18, color: dark ? '#ffffff' : '#000000' }}>
+                    <div className="tilt-warp" style={{ fontSize: 18, color: isDark ? '#ffffff' : '#000000' }}>
                         <b>💻 견적 결과</b><br/><br/>
                         {entries.map(([key, item]) => (
                             <div key={key} style={{ marginBottom: 8 }}>
                                 <b>{key.toUpperCase()}</b><br/>
                                 {item?.name || '-'}<br/>
-                                <span style={{ color: '#555' }}>{item?.price ? item.price.toLocaleString() + '원' : '-'}</span><br/>
-                                {item?.link ? <a href={item.link} target="_blank" rel="noreferrer" style={{ color: '#1a73e8' }}>🔗 상품 보기</a> : null}
-                                <hr style={{ border: 0, borderTop: '1px solid #ccc', margin: '8px 0' }} />
+                                <span style={{ color: isDark ? '#b0b0b0' : '#555555' }}>{item?.price ? item.price.toLocaleString() + '원' : '-'}</span><br/>
+                                {item?.link ? <a href={item.link} target="_blank" rel="noreferrer" style={{ color: isDark ? '#60a5fa' : '#1a73e8' }}>🔗 상품 보기</a> : null}
+                                <hr style={{ border: 0, borderTop: isDark ? '1px solid #555' : '1px solid #ccc', margin: '8px 0' }} />
                             </div>
                         ))}
                         <b>💰 총합:</b> {data.total_price.toLocaleString()}원<br/>
@@ -397,6 +474,16 @@ export default function App() {
 
     const LoginLogoutButtons = () => (
         <div className="flex items-center space-x-4" style={{ marginRight: 40 }}>
+            <button 
+                className="tilt-warp p-2 rounded-lg hover:opacity-80 transition-opacity" 
+                style={{ backgroundColor: '#6b7280', color: 'white' }}
+                onClick={() => setScreen('chat')}
+                title="채팅으로 돌아가기"
+            >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </button>
             {!user ? (
                 <button className="login-button tilt-warp px-6 py-2 rounded-lg hover:opacity-80" style={{ fontSize: 20 }} onClick={() => setScreen('login')}>로그인</button>
             ) : (
@@ -433,15 +520,17 @@ export default function App() {
                                         PC Builder
                                     </h1>
                                     <a href="#" className="tilt-warp nav-text font-normal hidden md:block" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('expert'); }}>전문가 추천</a>
+                                    <a href="#" className="tilt-warp nav-text font-normal hidden md:block" style={{ fontSize: 32, color: 'var(--figma-gray-500)' }} onClick={(e) => { e.preventDefault(); setScreen('gallery'); }}>견적 모아보기</a>
                         </div>
                         <LoginLogoutButtons />
                     </div>
                 </div>
             </header>
 
-            {/* 모바일 전용 전문가 추천 버튼 */}
-            <div className="md:hidden px-5 pt-4">
+            {/* 모바일 전용 메뉴 버튼 */}
+            <div className="md:hidden px-5 pt-4 space-y-2">
                 <a href="#" onClick={(e) => { e.preventDefault(); setScreen('expert'); }} className="w-full block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>전문가 추천</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); setScreen('gallery'); }} className="w-full block text-center py-3 rounded-lg" style={{ color: 'var(--figma-gray-500)', backgroundColor: 'var(--figma-gray-100)' }}>견적 모아보기</a>
             </div>
 
             {screen === 'main' && (
@@ -551,15 +640,15 @@ export default function App() {
                                     {chatMessages.map((m, idx) => (
                                         <div key={idx} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                                             {m.role === 'user' ? (
-                                                <div className="chat-message-user rounded-2xl px-4 py-2 max-w-[95%] md:max-w-[85%]" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff' }}>
-                                                    <p className="tilt-warp text-lg" style={{ fontSize: 18, color: isDark ? '#ffffff' : '#000000' }}>
+                                                <div className="chat-message-user rounded-2xl px-4 py-2 max-w-[95%] md:max-w-[85%]" style={{ backgroundColor: isDark ? '#2d3748' : '#e0e7ff' }}>
+                                                    <p className="tilt-warp text-lg" style={{ fontSize: 18, color: isDark ? '#ffffff' : '#1e293b' }}>
                                                         {m.content}
                                                     </p>
                                                 </div>
                                             ) : (
                                                 <div className="flex items-start space-x-3 max-w-[95%] md:max-w-[90%]">
                                                     <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0"><span className="text-white font-bold text-sm">AI</span></div>
-                                                    <div className="chat-message-ai rounded-2xl px-4 py-2 flex-1" style={{ backgroundColor: isDark ? '#333333' : '#d2e0ff', color: isDark ? '#ffffff' : '#000000' }}>
+                                                    <div className="chat-message-ai rounded-2xl px-4 py-2 flex-1" style={{ backgroundColor: isDark ? '#2d3748' : '#dbeafe', color: isDark ? '#ffffff' : '#1e293b' }}>
                                                         {renderAIMessage(m.content)}
                                                     </div>
                                                 </div>
@@ -752,6 +841,316 @@ export default function App() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {screen === 'gallery' && (
+                <main className="min-h-screen flex" style={{ backgroundColor: 'var(--figma-white)' }}>
+                    {/* 왼쪽: 선택된 견적 비교 화면 */}
+                    <div className="flex-1 p-8 overflow-y-auto" style={{ minHeight: '100vh' }}>
+                        <div className="max-w-5xl mx-auto">
+                            <div className="text-center mb-10" style={{ marginTop: '40px' }}>
+                                <h1 className="tilt-warp font-normal mb-4" style={{ fontSize: 'clamp(32px, 5vw, 48px)', color: 'var(--figma-black)' }}>견적 모아보기</h1>
+                                <p className="tilt-warp font-normal" style={{ fontSize: 'clamp(14px, 2vw, 18px)', color: 'var(--figma-gray-600)' }}>오른쪽에서 견적을 선택하여 비교하세요</p>
+                            </div>
+
+                            {comparisonList.length === 0 ? (
+                                <div className="text-center py-20">
+                                    <p className="text-xl" style={{ color: 'var(--figma-gray-600)' }}>오른쪽 목록에서 견적을 선택해주세요</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {comparisonList.map((item, idx) => {
+                                        // 데이터 파싱
+                                        let raw = item?.data;
+                                        try { raw = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (_) {}
+                                        const estimate = raw?.estimate || raw?.data?.estimate || null;
+                                        const title = item?.title || raw?.title || `견적 #${idx + 1}`;
+                                        const total = item?.totalPrice ?? raw?.totalPrice ?? raw?.total_price ?? estimate?.total_price;
+                                        const username = item?.username || item?.user?.name || '익명';
+                                        
+                                        const formatDate = (dateStr) => {
+                                            if (!dateStr) return '';
+                                            try {
+                                                const date = new Date(dateStr);
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                const hours = String(date.getHours()).padStart(2, '0');
+                                                const minutes = String(date.getMinutes()).padStart(2, '0');
+                                                return `${month}.${day} ${hours}:${minutes}`;
+                                            } catch (_) {
+                                                return '';
+                                            }
+                                        };
+                                        const createdAt = formatDate(item?.createdAt);
+
+                                        // 이미 내 견적에 있는지 확인 (estimate 데이터로 비교)
+                                        const isAlreadySaved = myEstimates.some(myEst => {
+                                            let myRaw = myEst?.data;
+                                            try { myRaw = typeof myRaw === 'string' ? JSON.parse(myRaw) : myRaw; } catch (_) {}
+                                            const myEstimate = myRaw?.estimate || myRaw?.data?.estimate || null;
+                                            
+                                            // 모든 부품을 비교 (같은 구성인지 확인)
+                                            if (estimate && myEstimate) {
+                                                const parts = ['cpu', 'gpu', 'mboard', 'ram', 'ssd', 'cooler', 'power', 'case'];
+                                                return parts.every(part => 
+                                                    estimate[part]?.name === myEstimate[part]?.name
+                                                );
+                                            }
+                                            return false;
+                                        });
+
+                                        const categories = [
+                                            ['cpu', 'CPU'],
+                                            ['gpu', 'GPU'],
+                                            ['mboard', 'MBOARD'],
+                                            ['ram', 'RAM'],
+                                            ['ssd', 'SSD'],
+                                            ['cooler', 'COOLER'],
+                                            ['power', 'POWER'],
+                                            ['case', 'CASE'],
+                                        ];
+
+                                        return (
+                                            <div 
+                                                key={item?.id || idx} 
+                                                className="rounded-xl p-4 border bg-white dark:bg-gray-800 shadow hover:shadow-lg transition-shadow"
+                                                style={{ borderColor: isDark ? '#4b5563' : '#d1d5db' }}
+                                            >
+                                                <div className="mb-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <h3 className="tilt-warp text-lg font-semibold truncate flex-1" style={{ color: isDark ? '#ffffff' : 'var(--figma-black)' }}>
+                                                            {title}
+                                                        </h3>
+                                                        <div className="flex items-center gap-1">
+                                                            {user && !isAlreadySaved && (
+                                                                <button
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        try {
+                                                                            const res = await apiService.saveEstimate(estimate || item, sessionId);
+                                                                            if (res.success) {
+                                                                                showNotification('견적이 저장되었습니다.', 'success');
+                                                                                // 내 견적 목록 새로고침
+                                                                                loadMyEstimates();
+                                                                            } else {
+                                                                                showNotification(res.message || '견적 저장에 실패했습니다.', 'error');
+                                                                            }
+                                                                        } catch {
+                                                                            showNotification('견적 저장 중 오류가 발생했습니다.', 'error');
+                                                                        }
+                                                                    }}
+                                                                    className="px-2 py-1 rounded text-xs hover:opacity-80"
+                                                                    style={{ 
+                                                                        backgroundColor: '#c9ced6', 
+                                                                        color: 'white'
+                                                                    }}
+                                                                    title="내 견적으로 저장"
+                                                                >
+                                                                    💾
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setComparisonList(prev => prev.filter(est => est?.id !== item?.id));
+                                                                }}
+                                                                className="px-2 py-1 rounded text-xs hover:opacity-80"
+                                                                style={{ backgroundColor: '#dc3545', color: 'white' }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-xs" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                                        <span className="truncate">{username}</span>
+                                                        {createdAt && (
+                                                            <>
+                                                                <span>•</span>
+                                                                <span className="truncate">{createdAt}</span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-3 pb-3 border-b" style={{ borderColor: isDark ? '#4b5563' : '#e5e7eb' }}>
+                                                    <div className="text-xl font-bold" style={{ color: isDark ? '#60a5fa' : '#1a73e8' }}>
+                                                        {typeof total === 'number' ? total.toLocaleString() + '원' : '-'}
+                                                    </div>
+                                                </div>
+
+                                                {estimate ? (
+                                                    <div className="space-y-1.5">
+                                                        {categories.map(([key, label]) => {
+                                                            const part = estimate[key];
+                                                            if (!part) return null;
+                                                            const name = part.name ?? '-';
+                                                            const price = typeof part.price === 'number' ? part.price.toLocaleString() + '원' : '-';
+                                                            const link = part.link;
+                                                            return (
+                                                                <div key={key} className="py-1.5 border-b" style={{ borderColor: isDark ? '#374151' : '#f3f4f6' }}>
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="font-semibold text-xs" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                                                                {label}
+                                                                            </div>
+                                                                            <div className="mt-0.5 text-sm" style={{ color: isDark ? '#ffffff' : '#111827' }} title={name}>
+                                                                                {name}
+                                                                            </div>
+                                                                            <div className="text-xs mt-0.5" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                                                                {price}
+                                                                            </div>
+                                                                        </div>
+                                                                        {link && (
+                                                                            <a 
+                                                                                href={link} 
+                                                                                target="_blank" 
+                                                                                rel="noreferrer" 
+                                                                                className="text-xs hover:underline flex-shrink-0" 
+                                                                                style={{ color: isDark ? '#60a5fa' : '#1a73e8' }}
+                                                                            >
+                                                                                보기
+                                                                            </a>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-2" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                                        <span className="text-xs">견적 정보 없음</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 오른쪽: 모든 견적 목록 (사이드바) */}
+                    <div 
+                        className="w-80 border-l overflow-y-auto bg-gray-50 dark:bg-gray-900"
+                        style={{ 
+                            minHeight: '100vh', 
+                            maxHeight: '100vh',
+                            borderColor: isDark ? '#4b5563' : '#e5e7eb'
+                        }}
+                    >
+                        <div className="border-b" style={{ borderColor: isDark ? '#4b5563' : '#e5e7eb', position: 'sticky', top: 0, backgroundColor: isDark ? '#111827' : '#f9fafb', zIndex: 10 }}>
+                            <h2 className="text-lg font-semibold px-4 pt-4 pb-2" style={{ color: isDark ? '#ffffff' : 'var(--figma-black)' }}>
+                                견적 목록
+                            </h2>
+                            
+                            {/* 탭 버튼 */}
+                            <div className="flex px-4 pb-2 gap-2">
+                                <button
+                                    onClick={() => setActiveTab('my')}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'my' 
+                                            ? 'bg-blue-500 text-white' 
+                                            : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                    }`}
+                                    style={{ color: activeTab === 'my' ? 'white' : (isDark ? '#ffffff' : '#000000') }}
+                                >
+                                    내 견적
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('all')}
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                                        activeTab === 'all' 
+                                            ? 'bg-blue-500 text-white' 
+                                            : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
+                                    }`}
+                                    style={{ color: activeTab === 'all' ? 'white' : (isDark ? '#ffffff' : '#000000') }}
+                                >
+                                    전체 견적
+                                </button>
+                            </div>
+
+                            {galleryLoading && (
+                                <div className="text-center py-2 pb-3">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="p-3 space-y-2">
+                            {(activeTab === 'my' ? myEstimates : galleryEstimates).length === 0 ? (
+                                <div className="text-center py-10" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                    <p className="text-sm">
+                                        {activeTab === 'my' 
+                                            ? (user ? '저장된 견적이 없습니다.' : '로그인이 필요합니다.')
+                                            : '견적이 없습니다.'}
+                                    </p>
+                                </div>
+                            ) : (
+                                (activeTab === 'my' ? myEstimates : galleryEstimates).map((item, idx) => {
+                                let raw = item?.data;
+                                try { raw = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch (_) {}
+                                const estimate = raw?.estimate || raw?.data?.estimate || null;
+                                const title = item?.title || raw?.title || `견적 #${idx + 1}`;
+                                const total = item?.totalPrice ?? raw?.totalPrice ?? raw?.total_price ?? estimate?.total_price;
+                                const username = activeTab === 'all' ? '익명의 사용자' : (item?.username || item?.user?.name || (user ? user.name : '익명'));
+                                
+                                const formatDate = (dateStr) => {
+                                    if (!dateStr) return '';
+                                    try {
+                                        const date = new Date(dateStr);
+                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                        const day = String(date.getDate()).padStart(2, '0');
+                                        const hours = String(date.getHours()).padStart(2, '0');
+                                        const minutes = String(date.getMinutes()).padStart(2, '0');
+                                        return `${month}.${day} ${hours}:${minutes}`;
+                                    } catch (_) {
+                                        return '';
+                                    }
+                                };
+                                const createdAt = formatDate(item?.createdAt);
+
+                                const isSelected = comparisonList.some(e => e?.id === item?.id);
+
+                                return (
+                                    <div
+                                        key={item?.id || idx}
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                setComparisonList(prev => prev.filter(e => e?.id !== item?.id));
+                                            } else {
+                                                // 최대 3개 제한
+                                                if (comparisonList.length >= 3) {
+                                                    showNotification('최대 3개까지만 비교가 가능합니다.', 'warning');
+                                                    return;
+                                                }
+                                                // estimate 정보를 포함한 전체 item 추가
+                                                setComparisonList(prev => [...prev, { ...item, estimate, username, title, totalPrice: total }]);
+                                            }
+                                        }}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="font-medium text-sm mb-1" style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                                                    {username} ({createdAt})
+                                                </div>
+                                                <div className="text-xs mb-1" style={{ color: isDark ? '#9ca3af' : '#6b7280' }}>
+                                                    {title}
+                                                </div>
+                                                <div className="text-xs font-bold" style={{ color: isDark ? '#60a5fa' : '#1a73e8' }}>
+                                                    {typeof total === 'number' ? total.toLocaleString() + '원' : '-'}
+                                                </div>
+                                            </div>
+                                            {isSelected && (
+                                                <div className="ml-2 text-blue-500 text-xl">✓</div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            }))}
+                        </div>
+                    </div>
+                </main>
             )}
         </div>
     );
